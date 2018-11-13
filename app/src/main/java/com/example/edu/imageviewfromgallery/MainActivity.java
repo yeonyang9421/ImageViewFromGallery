@@ -1,6 +1,7 @@
 package com.example.edu.imageviewfromgallery;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -18,15 +19,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
     public static final int REQUEST_CODE_GALLERY = 1;
     public static final int REQUEST_CODE_CAMERA = 2;
     public  static  final  int  PERMISSION_REQUEST_CODE=100;
-    Button mfromGalleryButton ,mimageCaptureButton;
-    ImageView mimageViewFromGallery;
+    Button mfromGalleryButton ,mimageCaptureButton,mimageButton;
+    ImageView mimageViewFromGallery,mimageViewFromGallery2;
 
 
     @Override
@@ -34,9 +39,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         mfromGalleryButton=(Button)findViewById(R.id.fromGalleryButton);
         mimageCaptureButton=(Button)findViewById(R.id.imageCaptureButton);
         mimageViewFromGallery=(ImageView)findViewById(R.id.imageViewFromGallery);
+        mimageViewFromGallery2=(ImageView)findViewById(R.id.imageViewFromGallery2) ;
+        mimageButton=(Button)findViewById(R.id.imageRead);
         mfromGalleryButton.setOnClickListener(this);
         mimageCaptureButton.setOnClickListener(this);
 
@@ -68,18 +76,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             intent.setType("image/");
             startActivityForResult(intent, REQUEST_CODE_GALLERY);
             case R.id.imageCaptureButton:
-                if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)){
-                    Intent intent1=new Intent();
+                if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+                    Intent intent1 = new Intent();
                     intent1.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
                     startActivityForResult(intent1, REQUEST_CODE_CAMERA);
                 }
+                    break;
+                case R.id.imageRead:
+                    FileInputStream fileInputStream = null;
+                    try {
+                        fileInputStream = openFileInput("myimg.jpg");
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    byte[] buffer= new byte[0];
+                    try {
+                        buffer = new byte[fileInputStream.available()];
+                        fileInputStream.read(buffer);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    mimageViewFromGallery2.setImageBitmap(byteArrayToBitmap(buffer));
+                }
         }
-    }
+
 
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+
         switch (requestCode) {
             case REQUEST_CODE_GALLERY:
 
@@ -98,8 +125,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Bundle extras =data.getExtras();
                     Bitmap bitmap=(Bitmap)extras.get("data");
                     mimageViewFromGallery.setImageBitmap(bitmap);
-
+                    try {
+                        FileOutputStream fileOutputStream=openFileOutput("myimg.jpg",Context.MODE_PRIVATE);
+                        fileOutputStream.write(bitmapToByteArray(bitmap));
+                        fileOutputStream.close();
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
         }
+
+    }
+
+    private byte[] bitmapToByteArray(Bitmap bitmap) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+        byte[] byteArray = stream.toByteArray();
+        return byteArray;
+    }
+
+    private Bitmap byteArrayToBitmap(byte[] byteArray) {
+        Bitmap bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+        return bitmap;
     }
 }
